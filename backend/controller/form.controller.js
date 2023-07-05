@@ -18,12 +18,12 @@ const upload = multer()
 // const uploadFiles = multer({ storage });
 
 const transporter = nodemailer.createTransport({
-    host: 'mail.propelcrm.co.uk',
-    port: 465,
+    host: '',
+    port: 456,
     secure: false,
     auth: {
-        user: 'info@propelcrm.co.uk',
-        pass: 'Amazon1947@',
+        user: '',
+        pass: '',
     },
     connectionTimeout: 5000,
     secure: true,
