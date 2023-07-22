@@ -7,13 +7,15 @@ import keys from "../../assets/img/icons/keys.png"
 import walls from "../../assets/img/icons/walls.png"
 import kitchen from "../../assets/img/icons/kitchen.png"
 import other from "../../assets/img/icons/other.png";
+import { Modal, Button } from 'react-bootstrap';
 import 'lato-font/css/lato-font.css';
 import axios from 'axios';
 import Arrow from "../../assets/img/arrow.png";
 import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import { Link } from "react-router-dom";
+import CheckImg from "../../assets/img/check.png"
 
 
 //Ketchen
@@ -65,7 +67,8 @@ const Step1 = () => {
     const [selectedOption, setSelectedOption] = useState(null);
     const [selectedOption2, setSelectedOption2] = useState(null);
     const [currentStep, setCurrentStep] = useState(1);
-    const [showThankYou, setShowThankYou] = useState(false);
+    const [submitButtonClicked, setSubmitButtonClicked] = useState(false);
+    const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -79,32 +82,31 @@ const Step1 = () => {
 
     // ======== Handle Images and Previews Start =========
     const [images, setImages] = useState([]);
-
     const handleMultipleImages = (evnt) => {
-        const targetFiles = evnt.target.files;
-        const formData = new FormData();
-        // for (let i = 0; i < targetFiles.length; i++) {
-        //     formData.append("images", targetFiles[i]);
-        // }
+        const selectedFiles = evnt.target.files;
+        const selectedFileCount = selectedFiles.length;
+        const maxUploadLimit = 5;
+        const maxImageSizeInBytes = 1242880;
 
-        for (const file of files) {
-            formData.append("files", file);
+        const validFiles = [];
+
+        for (let i = 0; i < selectedFileCount; i++) {
+            const file = selectedFiles[i];
+            const fileSizeInBytes = file.size;
+
+            if (fileSizeInBytes > maxImageSizeInBytes) {
+                alert(`The file "${file.name}" exceeds the maximum image size of 1MB.`);
+                return;
+            }
+
+            validFiles.push(file);
         }
 
-        // setFormData((prevFormData) => ({
-        //     ...prevFormData,
-        //     image: Array.from(targetFiles),
-        // }));
-
-        
-
-        const targetFilesObject = [...targetFiles];
-        const selectedFiles = targetFilesObject.map((file) =>
-            URL.createObjectURL(file)
-        );
-        setImages(selectedFiles);
+        const selectedFilesArray = Array.from(validFiles);
+        setFormData({ ...formData, image: selectedFilesArray });
+        setImages(selectedFilesArray);
+        console.log("Files", selectedFilesArray);
     };
-
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -237,7 +239,6 @@ const Step1 = () => {
                     newData.append("image", images[i]);
                 }
             }
-
             const response = await axios({
                 method: "post",
                 url: url,
@@ -246,27 +247,39 @@ const Step1 = () => {
                     "Content-Type": "multipart/form-data",
                 },
             });
-
+            setSubmitButtonClicked(true);
             if (response?.data.success === true) {
                 toast.success(response.data.message);
                 console.log('Form submitted successfully');
-                navigate('/thankyou');
+
             } else if (response?.data.success === false) {
                 toast.error(response.data.message);
             }
-
             console.log("response", response)
         } catch (error) {
-            console.log(error);
+            console.error('An error occurred:', error);
         }
     };
 
 
+    useEffect(() => {
+        const startModalTimer = () => {
+            const timer = setTimeout(() => {
+                setShowModal(true);
+            }, 500);
 
-    // const handleLocator = () => {
-    //     handleSubmit();
-    //     navigate('/thankyou');
-    // };
+            return () => clearTimeout(timer);
+        };
+
+        if (submitButtonClicked) {
+            startModalTimer();
+        }
+    }, [submitButtonClicked]);
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+    };
+
 
     return (
         <>
@@ -561,19 +574,17 @@ const Step1 = () => {
                                 <div className='container'>
                                     <h5 className="mb-4">Uploaded Images of the Issue</h5>
                                     <div className="row">
-                                        {images.map((image, index) => {
-                                            return (
-                                                <div key={index} className="col-md-3 mb-3">
-                                                    <div className="">
-                                                        <img
-                                                            src={image}
-                                                            className="card-img-top uploaded-image"
-                                                            alt={`Uploaded ${index + 1}`}
-                                                        />
-                                                    </div>
+                                        {images.map((image, index) => (
+                                            <div key={index} className="col-md-3 mb-3">
+                                                <div className="">
+                                                    <img
+                                                        src={URL.createObjectURL(image)}
+                                                        className="card-img-top uploaded-image"
+                                                        alt={`Uploaded ${index + 1}`}
+                                                    />
                                                 </div>
-                                            );
-                                        })}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
@@ -583,7 +594,6 @@ const Step1 = () => {
                             <button id="next-btn" type="button" onClick={handleNext}>
                                 Next
                             </button>
-                            <ToastContainer />
                         </div>
                     )}
 
@@ -647,7 +657,7 @@ const Step1 = () => {
                         </div>
                     )}
 
-                    {/* {currentStep === 6 && (
+                    {currentStep === 6 && (
                         <div className="step">
                             <h4>Confirm Your Information</h4>
                             <div className="form-check ps-0 q-box">
@@ -664,28 +674,28 @@ const Step1 = () => {
                                             </tr>
                                         </tbody>
                                     </table>
+
                                     {images.length > 0 && (
-                                        <div>
+                                        <div className='container'>
                                             <h5 className="mb-4">Uploaded Images of the Issue</h5>
                                             <div className="row">
-                                                {images.map((image, index) => {
-                                                    return (
-                                                        <div key={index} className="mb-3 col-md-3" >
+                                                {images.map((image, index) => (
+                                                    <div key={index} className="col-md-3 mb-3">
+                                                        <div className="">
                                                             <img
-                                                                src={image}
-                                                                className="card-img-top"
+                                                                src={URL.createObjectURL(image)}
+                                                                className="card-img-top uploaded-image"
                                                                 alt={`Uploaded ${index + 1}`}
                                                             />
                                                         </div>
-                                                    );
-                                                })}
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     )}
+                                    <h4 className='mt-4'>Personal Details</h4>
                                     <table>
                                         <tbody>
-                                            <h4 className='mt-4'>Personal Details</h4>
-
                                             <tr>
                                                 <td className="text-nowrap align-top"><h6>Name</h6> </td>
                                                 <td className="text-nowrap"><p className='capi'>{formData.name}</p> </td>
@@ -713,92 +723,29 @@ const Step1 = () => {
                                 Submit
                             </button>
                         </div >
-                    )} */}
-
-
-
-
-                    <div>
-                        {currentStep === 6 && !showThankYou && (
-                            <div className="step">
-                                <h4>Confirm Your Information</h4>
-                                <div className="form-check ps-0 q-box">
-                                    <div className="table-container">
-                                        <table>
-                                            <tbody>
-                                                <tr>
-                                                    <td className="text-nowrap align-top" style={{ width: "250px" }}><h6>Problem</h6> </td>
-                                                    <td className="text-nowrap"><p className='capi'>{formData.selectedOption}, {formData.selectedOption2}</p> </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="text-nowrap align-top" style={{ width: "250px" }}><h6>Additional Information</h6></td>
-                                                    <td className="text-break"><p>{formData.additionalInfo}</p></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                        {images.length > 0 && (
-                                            <div>
-                                                <h5 className="mb-4">Uploaded Images of the Issue</h5>
-                                                <div className="row">
-                                                    {images.map((image, index) => {
-                                                        return (
-                                                            <div key={index} className="mb-3 col-md-3" >
-                                                                <img
-                                                                    src={image}
-                                                                    className="card-img-top"
-                                                                    alt={`Uploaded ${index + 1}`}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <h4 className='mt-4'>Personal Details</h4>
-                                        <table>
-                                            <tbody>
-                                                <tr>
-                                                    <td className="text-nowrap align-top"><h6>Name</h6> </td>
-                                                    <td className="text-nowrap"><p className='capi'>{formData.name}</p> </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="text-nowrap align-top"><h6>Property Address</h6></td>
-                                                    <td className="text-nowrap"><p>{formData.address}</p></td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="text-nowrap align-top"><h6>Mobile Number</h6> </td>
-                                                    <td className="text-nowrap"><p >{formData.phone}</p> </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="text-nowrap align-top"><h6>Email address</h6></td>
-                                                    <td className="text-nowrap"><p>{formData.email}</p></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                <button id="prev-btn" type="button" onClick={handlePrev}>
-                                    Previous
-                                </button>
-                                <button id="next-btn" type="submit" onClick={handleSubmit}>
-                                    Submit
-                                </button>
-                            </div >
-                        )}
-                        {showThankYou && (
-                            <div className="step">
-                                <h4>Thank You!</h4>
-                                <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Velit dignissimos hic tempore repudiandae illo excepturi, nobis explicabo cupiditate exercitationem labore optio obcaecati similique perferendis quaerat. Eum nobis suscipit enim eius!</p>
-                            </div>
-                        )}
-                    </div>
-
-
-
-
+                    )}
                 </form >
             </div >
+
+            <div>
+                {/* Your other content */}
+                {showModal && (
+                    <Modal show={showModal} onHide={handleCloseModal}>
+                        {/* <Modal.Header closeButton>
+                            <Modal.Title>Maintance Form</Modal.Title>
+                        </Modal.Header> */}
+                        <Modal.Body>
+                            <img src={CheckImg} className='d-block m-auto img-fluid' width={200} />
+                            <h3 style={{fontWeight:"600", textAlign:"center"}}>Thank you for Reporting an issue!</h3>
+                            <p style={{fontWeight:"500", textAlign:"center"}}> Our team will get to you soon!</p>
+                            <div className='d-flex justify-content-center'>
+                                <Link to="https://propelsoft.co.uk/" className='btn btn-primary d-bock m-auto'>Back to Homepage</Link>
+                            </div>
+
+                        </Modal.Body>
+                    </Modal>
+                )}
+            </div>
         </>
     )
 }

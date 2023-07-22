@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import "./style.css"
-import "./bootstrap.min.css";
+// import "./bootstrap.min.css";
 import Step1 from './steps/Step1';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import 'lato-font/css/lato-font.css';
